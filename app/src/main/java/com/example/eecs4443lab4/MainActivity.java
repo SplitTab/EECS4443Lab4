@@ -34,7 +34,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_BITMAP = "key_bitmap_bytes";
     private static final String KEY_URI = "key_uri_string";
 
-    // Gallery Picker - NO PERMISSION REQUIRED ✅
+    // Gallery Picker - NO PERMISSION REQUIRED 
     private final ActivityResultLauncher<String> getContentLauncher =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
                 if (uri != null) {
@@ -42,9 +42,9 @@ public class MainActivity extends AppCompatActivity {
                     currentBitmap = null;
 
                     imageView.setImageURI(uri);
-                    setStatus("Selected from gallery ✅");
+                    setStatus("Selected from gallery");
                 } else {
-                    setStatus("Gallery canceled ❌");
+                    setStatus("Gallery canceled");
                 }
             });
 
@@ -56,9 +56,9 @@ public class MainActivity extends AppCompatActivity {
                     currentUri = null;
 
                     imageView.setImageBitmap(bitmap);
-                    setStatus("Camera image captured 📸");
+                    setStatus("Camera image captured");
                 } else {
-                    setStatus("Camera canceled ❌");
+                    setStatus("Camera canceled");
                 }
             });
 
@@ -68,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
                 if (granted) {
                     takePicturePreviewLauncher.launch(null);
                 } else {
-                    toast("Camera permission denied ❌");
+                    toast("Camera permission denied");
                     setStatus("Enable camera permission to take photos.");
                 }
             });
@@ -129,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
                 currentBitmap = bmp;
                 currentUri = null;
                 imageView.setImageBitmap(bmp);
-                setStatus("Restored camera image 🔄");
+                setStatus("Restored camera image");
                 return;
             }
         }
@@ -139,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
             currentUri = uri;
             currentBitmap = null;
             imageView.setImageURI(uri);
-            setStatus("Restored gallery image 🔄");
+            setStatus("Restored gallery image");
         }
     }
 
