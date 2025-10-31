@@ -1,12 +1,15 @@
 package com.example.eecs4443lab4;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.ImageDecoder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -19,36 +22,50 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
 
-    // UI
     private ImageView imageView;
     private TextView statusText;
 
-    // Keep track of currently displayed image
-    @Nullable private Bitmap currentBitmap = null; // Camera
-    @Nullable private Uri currentUri = null;       // Gallery
+    @Nullable private Bitmap currentBitmap = null;
+    @Nullable private Uri currentUri = null;
 
-    // Save/restore keys
     private static final String KEY_BITMAP = "key_bitmap_bytes";
     private static final String KEY_URI = "key_uri_string";
 
-    // ---- Gallery Picker (launched ONLY after storage/photos permission is granted) ----
-    private final ActivityResultLauncher<String> getContentLauncher =
-            registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
-                if (uri != null) {
-                    currentUri = uri;
-                    currentBitmap = null;
+    private final ActivityResultLauncher<Intent> getContentLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    Uri uri = result.getData().getData();
+                    if (uri != null) {
+                        currentUri = uri;
+                        currentBitmap = null;
 
-                    imageView.setImageURI(uri);
-                    setStatus("Selected from gallery");
+                        try {
+                            Bitmap bitmap;
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                ImageDecoder.Source source = ImageDecoder.createSource(getContentResolver(), uri);
+                                bitmap = ImageDecoder.decodeBitmap(source);
+                            } else {
+                                bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
+                            }
+
+                            currentBitmap = bitmap;
+                            imageView.setImageBitmap(bitmap);
+                            setStatus("Loaded image via MediaStore");
+
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            setStatus("Error loading image");
+                        }
+                    }
                 } else {
                     setStatus("Gallery canceled");
                 }
             });
 
-    // ---- Camera - TakePicturePreview ----
     private final ActivityResultLauncher<Void> takePicturePreviewLauncher =
             registerForActivityResult(new ActivityResultContracts.TakePicturePreview(), bitmap -> {
                 if (bitmap != null) {
@@ -62,7 +79,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
-    // ---- Runtime CAMERA permission ----
     private final ActivityResultLauncher<String> requestCameraPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
                 if (granted) {
@@ -73,12 +89,11 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
-    // ---- Runtime STORAGE/PHOTOS permission (READ_MEDIA_IMAGES or READ_EXTERNAL_STORAGE) ----
     private final ActivityResultLauncher<String> requestStoragePermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
                 if (granted) {
-                    // Now that we have permission, open the gallery
-                    getContentLauncher.launch("image/*");
+                    // Launch ACTION_GET_CONTENT intent
+                    openGalleryWithActionGetContent();
                 } else {
                     toast("Photos permission denied");
                     setStatus("Enable photos permission to select from gallery.");
@@ -103,7 +118,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // ----- Camera flow -----
     private void handleTakePhoto() {
         boolean hasPermission =
                 ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
@@ -116,15 +130,19 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // ----- Gallery flow with explicit permission request -----
     private void handleSelectFromGallery() {
         if (hasPhotoReadPermission()) {
-            // Permission already granted -> open picker
-            getContentLauncher.launch("image/*");
+            openGalleryWithActionGetContent();
         } else {
-            // Request the right permission for the OS version
             requestStoragePermissionLauncher.launch(requiredPhotoPermission());
         }
+    }
+
+    private void openGalleryWithActionGetContent() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("image/*");
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        getContentLauncher.launch(Intent.createChooser(intent, "Select an Image"));
     }
 
     private boolean hasPhotoReadPermission() {
@@ -133,7 +151,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String requiredPhotoPermission() {
-        // Android 13+ needs READ_MEDIA_IMAGES; older versions use READ_EXTERNAL_STORAGE
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             return Manifest.permission.READ_MEDIA_IMAGES;
         } else {
@@ -141,7 +158,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // ----- Save/restore image across rotation -----
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
