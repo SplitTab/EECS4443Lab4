@@ -4,6 +4,7 @@ import android.Manifest;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -25,50 +26,50 @@ public class MainActivity extends AppCompatActivity {
     private ImageView imageView;
     private TextView statusText;
 
-    // In-memory state of the currently shown image
-    @Nullable private Bitmap currentBitmap = null; // for camera result
-    @Nullable private Uri currentUri = null;       // for gallery result
+    // Keep track of currently displayed image
+    @Nullable private Bitmap currentBitmap = null; // Camera
+    @Nullable private Uri currentUri = null;       // Gallery
 
-    // Keys for saving/restoring across rotation
+    // Save/restore keys
     private static final String KEY_BITMAP = "key_bitmap_bytes";
     private static final String KEY_URI = "key_uri_string";
 
-    // 1) Gallery: GetContent (image/*)
+    // Gallery Picker - NO PERMISSION REQUIRED ✅
     private final ActivityResultLauncher<String> getContentLauncher =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
                 if (uri != null) {
                     currentUri = uri;
                     currentBitmap = null;
+
                     imageView.setImageURI(uri);
-                    setStatus("Loaded image from gallery.");
+                    setStatus("Selected from gallery ✅");
                 } else {
-                    toast("Gallery action cancelled.");
-                    setStatus("No image selected.");
+                    setStatus("Gallery canceled ❌");
                 }
             });
 
-    // 2) Camera: TakePicturePreview (returns Bitmap)
+    // Camera - TakePicturePreview
     private final ActivityResultLauncher<Void> takePicturePreviewLauncher =
             registerForActivityResult(new ActivityResultContracts.TakePicturePreview(), bitmap -> {
                 if (bitmap != null) {
                     currentBitmap = bitmap;
                     currentUri = null;
+
                     imageView.setImageBitmap(bitmap);
-                    setStatus("Captured image from camera.");
+                    setStatus("Camera image captured 📸");
                 } else {
-                    toast("Camera action cancelled.");
-                    setStatus("No image captured.");
+                    setStatus("Camera canceled ❌");
                 }
             });
 
-    // 3) RequestPermission: CAMERA
+    // Runtime camera permission
     private final ActivityResultLauncher<String> requestCameraPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
                 if (granted) {
                     takePicturePreviewLauncher.launch(null);
                 } else {
-                    toast("Camera permission denied.");
-                    setStatus("Permission denied; cannot open camera.");
+                    toast("Camera permission denied ❌");
+                    setStatus("Enable camera permission to take photos.");
                 }
             });
 
@@ -82,45 +83,35 @@ public class MainActivity extends AppCompatActivity {
         Button btnTakePhoto = findViewById(R.id.btnTakePhoto);
         Button btnSelectGallery = findViewById(R.id.btnSelectGallery);
 
-        // Button: Take Photo
         btnTakePhoto.setOnClickListener(v -> handleTakePhoto());
+        btnSelectGallery.setOnClickListener(v -> getContentLauncher.launch("image/*"));
 
-        // Button: Select from Gallery
-        btnSelectGallery.setOnClickListener(v -> {
-            getContentLauncher.launch("image/*");
-        });
-
-        // Restore previously shown image if any
         if (savedInstanceState != null) {
             restoreImageFromState(savedInstanceState);
         }
     }
 
     private void handleTakePhoto() {
-        boolean hasCamera =
+        boolean hasPermission =
                 ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                         == PermissionChecker.PERMISSION_GRANTED;
 
-        if (hasCamera) {
+        if (hasPermission) {
             takePicturePreviewLauncher.launch(null);
         } else {
             requestCameraPermissionLauncher.launch(Manifest.permission.CAMERA);
         }
     }
 
-    // Persist the current image across rotation:
-    // - If camera bitmap: compress -> byte[]
-    // - If gallery uri: save uri.toString()
+    // Save image across rotation
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
 
         if (currentBitmap != null) {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            // PNG is lossless; JPEG(90) is smaller — either is fine. Using PNG for simplicity.
             currentBitmap.compress(Bitmap.CompressFormat.PNG, 100, bos);
-            byte[] bytes = bos.toByteArray();
-            outState.putByteArray(KEY_BITMAP, bytes);
+            outState.putByteArray(KEY_BITMAP, bos.toByteArray());
         }
 
         if (currentUri != null) {
@@ -138,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
                 currentBitmap = bmp;
                 currentUri = null;
                 imageView.setImageBitmap(bmp);
-                setStatus("Restored camera image.");
+                setStatus("Restored camera image 🔄");
                 return;
             }
         }
@@ -148,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
             currentUri = uri;
             currentBitmap = null;
             imageView.setImageURI(uri);
-            setStatus("Restored gallery image.");
+            setStatus("Restored gallery image 🔄");
         }
     }
 
