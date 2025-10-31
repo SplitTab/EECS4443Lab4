@@ -18,7 +18,7 @@
 
     <!-- For Android 13 (API 33) and higher -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"
-        tools:ignore="PhotoAndVideoPolicy" />
+        tools:ignore="PhotoAndVideoPolicy,SelectedPhotoAccess" />
 
     <application
         android:allowBackup="true"
