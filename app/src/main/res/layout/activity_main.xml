@@ -3,66 +3,46 @@
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FAFAFF"
+    android:gravity="center"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="20dp"
+    android:background="#F1F8E9">
 
-    <!-- App Title -->
     <TextView
         android:id="@+id/titleText"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Profile Picture Updater"
-        android:textAlignment="center"
-        android:textColor="#111827"
-        android:textSize="22sp"
+        android:textSize="20sp"
         android:textStyle="bold"
-        android:paddingBottom="12dp" />
+        android:layout_marginBottom="16dp" />
 
-    <!-- Buttons row -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:paddingBottom="12dp">
-
-        <Button
-            android:id="@+id/btnTakePhoto"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:layout_weight="1"
-            android:text="Take Photo" />
-
-        <Button
-            android:id="@+id/btnSelectGallery"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_weight="1"
-            android:text="Select from Gallery" />
-    </LinearLayout>
-
-    <!-- Large ImageView -->
     <ImageView
         android:id="@+id/imageView"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:adjustViewBounds="true"
-        android:background="#E5E7EB"
+        android:layout_width="250dp"
+        android:layout_height="250dp"
+        android:scaleType="centerCrop"
+        android:background="#E0E0E0"
         android:contentDescription="Chosen image preview"
-        android:scaleType="fitCenter" />
+        android:layout_marginBottom="20dp" />
 
-    <!-- Small status TextView -->
-    <TextView
-        android:id="@+id/statusText"
+    <Button
+        android:id="@+id/btnTakePhoto"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:text="Take Photo" />
+
+    <Button
+        android:id="@+id/btnSelectGallery"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Select from Gallery"
+        android:layout_marginTop="10dp" />
+
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:text="Ready"
-        android:textColor="#374151"
-        android:textSize="14sp"
-        android:paddingTop="8dp"
-        android:paddingBottom="4dp" />
+        android:layout_marginTop="20dp" />
 </LinearLayout>
