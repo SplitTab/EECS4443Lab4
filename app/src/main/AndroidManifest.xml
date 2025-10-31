@@ -17,7 +17,8 @@
         android:maxSdkVersion="32" />
 
     <!-- For Android 13 (API 33) and higher -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"
+        tools:ignore="PhotoAndVideoPolicy" />
 
     <application
         android:allowBackup="true"
