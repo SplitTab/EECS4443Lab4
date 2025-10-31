@@ -22,52 +22,60 @@ import java.io.ByteArrayOutputStream;
 
 public class MainActivity extends AppCompatActivity {
 
-    // UI
+    // stores ui elements
     private ImageView imageView;
     private TextView statusText;
 
-    // Keep track of currently displayed image
-    @Nullable private Bitmap currentBitmap = null; // Camera
-    @Nullable private Uri currentUri = null;       // Gallery
+    // stores the captured images (one is for the camera while other is for gallery image)
+    // can be null so the program can decipher where the image was selected from
+    @Nullable private Bitmap currentCamImg = null;
+    @Nullable private Uri galImgUri = null;
 
-    // Save/restore keys
-    private static final String KEY_BITMAP = "key_bitmap_bytes";
-    private static final String KEY_URI = "key_uri_string";
+    // keys so the image can be stored and restored when rotating the screen
+    private static final String CAM_KEY = "camera_key";
+    private static final String GAL_KEY = "gallery_key";
 
-    // ---- Gallery Picker (launched ONLY after storage/photos permission is granted) ----
-    private final ActivityResultLauncher<String> getContentLauncher =
+    private final ActivityResultLauncher<String> galleryLauncher =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+                // if an image is selected from gallery, then store it in the gal variable (camera one is set to null
+                // so the code can eventually decipher whether image is from camera of gallery)
                 if (uri != null) {
-                    currentUri = uri;
-                    currentBitmap = null;
+                    galImgUri = uri;
+                    currentCamImg = null;
 
+                    // assigns the image to the ui for display
                     imageView.setImageURI(uri);
+
+                    // updates the status
                     setStatus("Selected from gallery");
                 } else {
-                    setStatus("Gallery canceled");
+                    // if gallery action was canceled, then shows relevant status
+                    setStatus("Gallery action canceled");
                 }
             });
 
-    // ---- Camera - TakePicturePreview ----
-    private final ActivityResultLauncher<Void> takePicturePreviewLauncher =
+    // camera launcher, works similar to the gallery code except uses bitmaps instead of uri
+    private final ActivityResultLauncher<Void> cameraLauncher =
             registerForActivityResult(new ActivityResultContracts.TakePicturePreview(), bitmap -> {
                 if (bitmap != null) {
-                    currentBitmap = bitmap;
-                    currentUri = null;
+                    currentCamImg = bitmap;
+                    galImgUri = null;
 
                     imageView.setImageBitmap(bitmap);
                     setStatus("Camera image captured");
                 } else {
-                    setStatus("Camera canceled");
+                    setStatus("Camera action canceled");
                 }
             });
 
-    // ---- Runtime CAMERA permission ----
-    private final ActivityResultLauncher<String> requestCameraPermissionLauncher =
+    // check permission for camera
+    private final ActivityResultLauncher<String> cameraPermission =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+                // if permission granted then launch camera
                 if (granted) {
-                    takePicturePreviewLauncher.launch(null);
+                    cameraLauncher.launch(null);
                 } else {
+                    // else bring up a toast that says permission was denied, then change the status
                     toast("Camera permission denied");
                     setStatus("Enable camera permission to take photos.");
                 }
@@ -78,7 +86,7 @@ public class MainActivity extends AppCompatActivity {
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
                 if (granted) {
                     // Now that we have permission, open the gallery
-                    getContentLauncher.launch("image/*");
+                    galleryLauncher.launch("image/*");
                 } else {
                     toast("Photos permission denied");
                     setStatus("Enable photos permission to select from gallery.");
@@ -110,9 +118,9 @@ public class MainActivity extends AppCompatActivity {
                         == PackageManager.PERMISSION_GRANTED;
 
         if (hasPermission) {
-            takePicturePreviewLauncher.launch(null);
+            cameraLauncher.launch(null);
         } else {
-            requestCameraPermissionLauncher.launch(Manifest.permission.CAMERA);
+            cameraPermission.launch(Manifest.permission.CAMERA);
         }
     }
 
@@ -120,7 +128,7 @@ public class MainActivity extends AppCompatActivity {
     private void handleSelectFromGallery() {
         if (hasPhotoReadPermission()) {
             // Permission already granted -> open picker
-            getContentLauncher.launch("image/*");
+            galleryLauncher.launch("image/*");
         } else {
             // Request the right permission for the OS version
             requestStoragePermissionLauncher.launch(requiredPhotoPermission());
@@ -146,26 +154,26 @@ public class MainActivity extends AppCompatActivity {
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
 
-        if (currentBitmap != null) {
+        if (currentCamImg != null) {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            currentBitmap.compress(Bitmap.CompressFormat.PNG, 100, bos);
-            outState.putByteArray(KEY_BITMAP, bos.toByteArray());
+            currentCamImg.compress(Bitmap.CompressFormat.PNG, 100, bos);
+            outState.putByteArray(CAM_KEY, bos.toByteArray());
         }
 
-        if (currentUri != null) {
-            outState.putString(KEY_URI, currentUri.toString());
+        if (galImgUri != null) {
+            outState.putString(GAL_KEY, galImgUri.toString());
         }
     }
 
     private void restoreImageFromState(Bundle state) {
-        byte[] bitmapBytes = state.getByteArray(KEY_BITMAP);
-        String uriString = state.getString(KEY_URI);
+        byte[] bitmapBytes = state.getByteArray(CAM_KEY);
+        String uriString = state.getString(GAL_KEY);
 
         if (bitmapBytes != null) {
             Bitmap bmp = BitmapFactory.decodeByteArray(bitmapBytes, 0, bitmapBytes.length);
             if (bmp != null) {
-                currentBitmap = bmp;
-                currentUri = null;
+                currentCamImg = bmp;
+                galImgUri = null;
                 imageView.setImageBitmap(bmp);
                 setStatus("Restored camera image");
                 return;
@@ -174,8 +182,8 @@ public class MainActivity extends AppCompatActivity {
 
         if (uriString != null) {
             Uri uri = Uri.parse(uriString);
-            currentUri = uri;
-            currentBitmap = null;
+            galImgUri = uri;
+            currentCamImg = null;
             imageView.setImageURI(uri);
             setStatus("Restored gallery image");
         }
