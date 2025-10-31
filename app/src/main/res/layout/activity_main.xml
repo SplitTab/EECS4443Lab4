@@ -48,13 +48,12 @@
     <ImageView
         android:id="@+id/imageView"
         android:layout_width="match_parent"
-        android:maxWidth="250dp"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:adjustViewBounds="true"
         android:background="#E5E7EB"
         android:contentDescription="Chosen image preview"
-        android:scaleType="centerCrop" />
+        android:scaleType="fitCenter" />
 
     <!-- Small status TextView -->
     <TextView
