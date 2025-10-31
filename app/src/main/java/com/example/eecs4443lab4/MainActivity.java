@@ -1,6 +1,7 @@
 package com.example.eecs4443lab4;
 
 import android.Manifest;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -16,7 +17,6 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-import androidx.core.content.PermissionChecker;
 
 import java.io.ByteArrayOutputStream;
 
@@ -34,7 +34,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_BITMAP = "key_bitmap_bytes";
     private static final String KEY_URI = "key_uri_string";
 
-    // Gallery Picker - NO PERMISSION REQUIRED 
+    // ---- Gallery Picker (launched ONLY after storage/photos permission is granted) ----
     private final ActivityResultLauncher<String> getContentLauncher =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
                 if (uri != null) {
@@ -48,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
-    // Camera - TakePicturePreview
+    // ---- Camera - TakePicturePreview ----
     private final ActivityResultLauncher<Void> takePicturePreviewLauncher =
             registerForActivityResult(new ActivityResultContracts.TakePicturePreview(), bitmap -> {
                 if (bitmap != null) {
@@ -62,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
-    // Runtime camera permission
+    // ---- Runtime CAMERA permission ----
     private final ActivityResultLauncher<String> requestCameraPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
                 if (granted) {
@@ -70,6 +70,18 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     toast("Camera permission denied");
                     setStatus("Enable camera permission to take photos.");
+                }
+            });
+
+    // ---- Runtime STORAGE/PHOTOS permission (READ_MEDIA_IMAGES or READ_EXTERNAL_STORAGE) ----
+    private final ActivityResultLauncher<String> requestStoragePermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+                if (granted) {
+                    // Now that we have permission, open the gallery
+                    getContentLauncher.launch("image/*");
+                } else {
+                    toast("Photos permission denied");
+                    setStatus("Enable photos permission to select from gallery.");
                 }
             });
 
@@ -84,17 +96,18 @@ public class MainActivity extends AppCompatActivity {
         Button btnSelectGallery = findViewById(R.id.btnSelectGallery);
 
         btnTakePhoto.setOnClickListener(v -> handleTakePhoto());
-        btnSelectGallery.setOnClickListener(v -> getContentLauncher.launch("image/*"));
+        btnSelectGallery.setOnClickListener(v -> handleSelectFromGallery());
 
         if (savedInstanceState != null) {
             restoreImageFromState(savedInstanceState);
         }
     }
 
+    // ----- Camera flow -----
     private void handleTakePhoto() {
         boolean hasPermission =
                 ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                        == PermissionChecker.PERMISSION_GRANTED;
+                        == PackageManager.PERMISSION_GRANTED;
 
         if (hasPermission) {
             takePicturePreviewLauncher.launch(null);
@@ -103,7 +116,32 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // Save image across rotation
+    // ----- Gallery flow with explicit permission request -----
+    private void handleSelectFromGallery() {
+        if (hasPhotoReadPermission()) {
+            // Permission already granted -> open picker
+            getContentLauncher.launch("image/*");
+        } else {
+            // Request the right permission for the OS version
+            requestStoragePermissionLauncher.launch(requiredPhotoPermission());
+        }
+    }
+
+    private boolean hasPhotoReadPermission() {
+        String perm = requiredPhotoPermission();
+        return ContextCompat.checkSelfPermission(this, perm) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private String requiredPhotoPermission() {
+        // Android 13+ needs READ_MEDIA_IMAGES; older versions use READ_EXTERNAL_STORAGE
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return Manifest.permission.READ_MEDIA_IMAGES;
+        } else {
+            return Manifest.permission.READ_EXTERNAL_STORAGE;
+        }
+    }
+
+    // ----- Save/restore image across rotation -----
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
