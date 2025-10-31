@@ -26,7 +26,6 @@
         android:layout_height="250dp"
         android:scaleType="fitCenter"
         android:adjustViewBounds="true"
-        android:background="#E0E0E0"
         android:contentDescription="Chosen image preview" />
 
     <!-- Bottom Row Buttons -->
