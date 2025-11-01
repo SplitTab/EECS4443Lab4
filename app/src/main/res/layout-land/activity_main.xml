@@ -6,9 +6,8 @@
     android:orientation="vertical"
     android:padding="20dp"
     android:gravity="center_horizontal"
-    android:background="#F1F8E9">
+    android:background="#FFFFFF">
 
-    <!-- Title Above Image -->
     <TextView
         android:id="@+id/titleText"
         android:layout_width="wrap_content"
@@ -19,17 +18,15 @@
         android:gravity="center"
         android:layout_marginBottom="12dp" />
 
-    <!-- Image Centered -->
     <ImageView
         android:id="@+id/imageView"
         android:layout_width="250dp"
         android:layout_height="250dp"
         android:scaleType="centerCrop"
-        android:background="#E0E0E0"
+        android:background="#D3D3D3"
         android:adjustViewBounds="true"
         android:contentDescription="Chosen image preview" />
 
-    <!-- Bottom Row Buttons -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -53,12 +50,11 @@
             android:layout_marginStart="10dp" />
     </LinearLayout>
 
-    <!-- Status Centered at Bottom -->
     <TextView
         android:id="@+id/statusText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Ready"
+        android:text="Select a profile pic"
         android:gravity="center"
         android:layout_marginTop="-5dp" />
 </LinearLayout>

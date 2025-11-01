@@ -1,22 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-
-    <!-- Optional: Declare that your app can use the camera -->
+<!--declaration that the app uses camera-->
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
 
-    <!-- CAMERA permission (all Android versions) -->
+<!--    camera permission-->
     <uses-permission android:name="android.permission.CAMERA" />
-
-    <!-- STORAGE / GALLERY permissions -->
-    <!-- For Android 12 (API 32) and lower -->
+<!--    for phones older than adroid 13-->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
 
-    <!-- For Android 13 (API 33) and higher -->
+    <!-- for phones with android 13 or higher -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"
         tools:ignore="PhotoAndVideoPolicy,SelectedPhotoAccess" />
 

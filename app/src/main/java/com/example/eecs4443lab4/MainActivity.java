@@ -24,6 +24,7 @@ public class MainActivity extends AppCompatActivity {
 
     // stores ui elements
     private ImageView imageView;
+    // status message gives guidance or context. Toasts are also used for live updates for error messages
     private TextView statusText;
 
     // stores the captured images (one is for the camera while other is for gallery image)
@@ -31,7 +32,7 @@ public class MainActivity extends AppCompatActivity {
     @Nullable private Bitmap currentCamImg = null;
     @Nullable private Uri galImgUri = null;
 
-    // keys so the image can be stored and restored when rotating the screen
+    // keys so the image can be stored and restored when rotating the screen in bundle
     private static final String CAM_KEY = "camera_key";
     private static final String GAL_KEY = "gallery_key";
 
@@ -69,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
             });
 
     // check permission for camera
-    private final ActivityResultLauncher<String> cameraPermission =
+    private final ActivityResultLauncher<String> cameraPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
                 // if permission granted then launch camera
                 if (granted) {
@@ -81,13 +82,15 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
-    // ---- Runtime STORAGE/PHOTOS permission (READ_MEDIA_IMAGES or READ_EXTERNAL_STORAGE) ----
-    private final ActivityResultLauncher<String> requestStoragePermissionLauncher =
+
+    // check permission for photos and videos
+    private final ActivityResultLauncher<String> storagePermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
                 if (granted) {
-                    // Now that we have permission, open the gallery
+                    // if permission is granted then call the gallery launcher to select image
                     galleryLauncher.launch("image/*");
                 } else {
+                    // if not granted then relevant status and toast updates are made
                     toast("Photos permission denied");
                     setStatus("Enable photos permission to select from gallery.");
                 }
@@ -98,77 +101,92 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // store UI elements to relevant variables
         imageView = findViewById(R.id.imageView);
         statusText = findViewById(R.id.statusText);
-        Button btnTakePhoto = findViewById(R.id.btnTakePhoto);
-        Button btnSelectGallery = findViewById(R.id.btnSelectGallery);
+        Button cameraButton = findViewById(R.id.btnTakePhoto);
+        Button galleryButton = findViewById(R.id.btnSelectGallery);
 
-        btnTakePhoto.setOnClickListener(v -> handleTakePhoto());
-        btnSelectGallery.setOnClickListener(v -> handleSelectFromGallery());
+        // add event listeners. onClick of a button, calls the relevant function
+        cameraButton.setOnClickListener(v -> cameraHandler());
+        galleryButton.setOnClickListener(v -> galleryHandler());
 
+        // if there was a previous instance, then use the image from that instance by calling hte relevant function
+        // this is useful when device is rotated as it can lose the image without this.
         if (savedInstanceState != null) {
             restoreImageFromState(savedInstanceState);
         }
     }
 
-    // ----- Camera flow -----
-    private void handleTakePhoto() {
-        boolean hasPermission =
+    // check if camera permissions are granted, if they are, then launches the camera, if not then launches the...
+    // camera permission pop up by calling hte previously defined function
+    private void cameraHandler() {
+        boolean permit =
                 ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                         == PackageManager.PERMISSION_GRANTED;
 
-        if (hasPermission) {
+        if (permit) {
             cameraLauncher.launch(null);
         } else {
-            cameraPermission.launch(Manifest.permission.CAMERA);
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA);
         }
     }
 
-    // ----- Gallery flow with explicit permission request -----
-    private void handleSelectFromGallery() {
-        if (hasPhotoReadPermission()) {
-            // Permission already granted -> open picker
+    // same thing as camera handler except this one is for gallery (photos or videos)
+    private void galleryHandler() {
+        if (checkGalleryPermit()) {
+            // call the gallery launcher if permission is granted
             galleryLauncher.launch("image/*");
         } else {
-            // Request the right permission for the OS version
-            requestStoragePermissionLauncher.launch(requiredPhotoPermission());
+            // else call the permission pop up
+            storagePermissionLauncher.launch(galleryApiCaller());
         }
     }
 
-    private boolean hasPhotoReadPermission() {
-        String perm = requiredPhotoPermission();
-        return ContextCompat.checkSelfPermission(this, perm) == PackageManager.PERMISSION_GRANTED;
+    // check if permit is there or not for the gallery
+    private boolean checkGalleryPermit() {
+        String permitType = galleryApiCaller();
+        return ContextCompat.checkSelfPermission(this, permitType) == PackageManager.PERMISSION_GRANTED;
     }
 
-    private String requiredPhotoPermission() {
-        // Android 13+ needs READ_MEDIA_IMAGES; older versions use READ_EXTERNAL_STORAGE
+    // returns the relevant code based on the API of the device in use
+    private String galleryApiCaller() {
+        // for versions newer than  or equal to android 13
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             return Manifest.permission.READ_MEDIA_IMAGES;
         } else {
+            // for older ones
             return Manifest.permission.READ_EXTERNAL_STORAGE;
         }
     }
 
-    // ----- Save/restore image across rotation -----
+    // for temporarily saving the image on device rotation, uses callback function that is called whenever...
+    // a state is about to be destroyed
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
 
+        // if image was from cam, then use byteArray and then save it in bundle (which is essentially a hashmap which is why
+        // a key is being used)
         if (currentCamImg != null) {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             currentCamImg.compress(Bitmap.CompressFormat.PNG, 100, bos);
             outState.putByteArray(CAM_KEY, bos.toByteArray());
         }
 
+        // else if it was from gallery then putString
         if (galImgUri != null) {
             outState.putString(GAL_KEY, galImgUri.toString());
         }
     }
 
+    // restore from saved bundle if it exists
     private void restoreImageFromState(Bundle state) {
+        // getting the bundles using the keys
         byte[] bitmapBytes = state.getByteArray(CAM_KEY);
         String uriString = state.getString(GAL_KEY);
 
+        // if there was an image saved from camera, then restore it into a bitmap
         if (bitmapBytes != null) {
             Bitmap bmp = BitmapFactory.decodeByteArray(bitmapBytes, 0, bitmapBytes.length);
             if (bmp != null) {
@@ -179,7 +197,7 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
         }
-
+        // if the image was from gallery then use uri
         if (uriString != null) {
             Uri uri = Uri.parse(uriString);
             galImgUri = uri;
@@ -189,10 +207,12 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // to update status
     private void setStatus(String msg) {
         statusText.setText(msg);
     }
 
+    // for toast popup
     private void toast(String msg) {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
